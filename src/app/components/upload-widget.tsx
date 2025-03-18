@@ -4,7 +4,6 @@ import { Upload } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Image from "next/image";
-import { useInView } from "react-intersection-observer";
 
 // Sample gallery items
 const galleryItems = [

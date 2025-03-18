@@ -1,16 +1,7 @@
-'use client';
-
-import { useState } from "react";
 import Link from "next/link";
-import { SignInButton, UserButton, SignedIn, SignedOut, SignUpButton, useUser } from "@clerk/nextjs";
+import { SignInButton, UserButton, SignedIn, SignedOut, SignUpButton } from "@clerk/nextjs";
 
 export const Header = () => {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const { isSignedIn } = useUser();
-
-    const toggleMobileMenu = () => {
-        setMobileMenuOpen(!mobileMenuOpen);
-    };
 
     return (
         <header className="border-b border-[hsl(var(--primary))]/30 bg-[hsl(var(--background))]/50 backdrop-blur sticky top-0 z-50">
