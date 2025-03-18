@@ -13,10 +13,10 @@ export const Header = () => {
     };
 
     return (
-        <header className="border-b border-[hsl(var(--primary))]/30 bg-[hsl(var(--background))]/80 backdrop-blur-xl sticky top-0 z-50">
+        <header className="border-b border-[hsl(var(--primary))]/30 bg-[hsl(var(--background))]/80 backdrop-blur sticky top-0 z-50">
             <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                 {/* Logo with responsive text size */}
-                <Link href="/" className="text-xl sm:text-2xl md:text-3xl font-bold gradient-text whitespace-nowrap">
+                <Link href="/" className="text-lg sm:text-2xl md:text-3xl font-bold gradient-text whitespace-nowrap">
                     OnlineShoppAR
                 </Link>
 
@@ -36,13 +36,13 @@ export const Header = () => {
                 <div className="flex items-center space-x-2 sm:space-x-4">
                     <SignedOut>
                         <SignInButton mode="modal">
-                            <button className="px-3 py-1.5 sm:px-4 sm:py-2 border border-[hsl(var(--primary))]/50 text-white rounded-lg transition-colors duration-300 hover:border-[hsl(var(--primary))] hover:cursor-pointer text-sm">
+                            <button className="px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 border border-[hsl(var(--primary))]/50 text-white rounded-lg transition-colors duration-300 hover:border-[hsl(var(--primary))] hover:cursor-pointer">
                                 Sign In
                             </button>
                         </SignInButton>
 
                         <SignUpButton mode="modal">
-                            <button className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[hsl(var(--primary))] text-white rounded-lg shadow-md transition-all duration-300 hover:bg-[hsl(var(--primary))]/80 hover:shadow-lg hover:cursor-pointer text-sm">
+                            <button className="px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2 bg-[hsl(var(--primary))] text-white rounded-lg shadow-md transition-all duration-300 hover:bg-[hsl(var(--primary))]/80 hover:shadow-lg hover:cursor-pointer">
                                 Register
                             </button>
                         </SignUpButton>

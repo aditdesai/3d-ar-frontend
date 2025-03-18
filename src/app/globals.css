@@ -44,6 +44,11 @@ body {
   filter: blur(130px);
 }
 
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
 .card-highlight {
   border: 1px solid rgba(147, 51, 234, 0.2);
   transition: all 0.3s ease;
