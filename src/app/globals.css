@@ -38,8 +38,8 @@ body {
 }
 
 .backdrop-blur {
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .card-highlight {
