@@ -1,5 +1,3 @@
-"use client"
-
 import { Check } from "lucide-react"
 
 const pricingPlans = [
@@ -28,7 +26,7 @@ const pricingPlans = [
 
 export const PricingSection = () => {
   return (
-    <section id="pricing" className="relative z-10 py-16 mt-20">
+    <section id="pricing" className="relative z-10 py-16 mt-10">
       <div className="container mx-auto px-4">
         <h2 className="text-4xl font-bold text-center mb-12 gradient-text">Pricing Plans</h2>
         <div className="grid md:grid-cols-3 gap-8">

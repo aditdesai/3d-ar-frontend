@@ -1,7 +1,7 @@
 import { Background } from "./components/background";
 import Footer from "./components/footer";
-import GallerySection from "./components/gallery-section";
 import { PricingSection } from "./components/pricing-section";
+import { TutorialSection } from "./components/tutorial-section";
 import { UploadImageWidget } from "./components/upload-widget";
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
       <main className="flex-grow">
         <UploadImageWidget />
         <PricingSection />
-        <GallerySection />
+        <TutorialSection />
       </main>
 
       <Footer />
