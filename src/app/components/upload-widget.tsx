@@ -19,7 +19,7 @@ export const UploadImageWidget = () => {
     const [modelUrl, setModelUrl] = useState<string | null>(null);
     const [selectedSampleName, setSelectedSampleName] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isArSupported, setIsArSupported] = useState(false);
+    const [isIosDevice, setIsIosDevice] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -84,12 +84,13 @@ export const UploadImageWidget = () => {
     };
 
     useEffect(() => {
-        function supportsUsdz() {
-            const anchor = document.createElement('a');
-            return anchor.relList && anchor.relList.supports && anchor.relList.supports("ar");
-        }
+        // Check if device is iOS (iPhone or iPad)
+        const checkIosDevice = () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
 
-        setIsArSupported(supportsUsdz());
+        setIsIosDevice(checkIosDevice());
     }, []);
 
     return (
@@ -151,7 +152,7 @@ export const UploadImageWidget = () => {
                                 rel="ar"
                                 className="inline-block bg-[hsl(var(--accent))]/10 text-white/70 px-4 py-3 rounded-lg hover:bg-[hsl(var(--accent))]/20 transition-colors font-semibold text-sm sm:text-base"
                             >
-                                {isArSupported ? "View in AR" : "Download"}
+                                {isIosDevice ? "View in AR" : "Download"}
                             </a>
                         </div>
                     )}
