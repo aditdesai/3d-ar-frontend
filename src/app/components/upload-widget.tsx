@@ -2,8 +2,10 @@
 
 import { Upload } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import Image from "next/image";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 // Sample gallery items
 const galleryItems = [
@@ -14,12 +16,67 @@ const galleryItems = [
 ];
 
 export const UploadImageWidget = () => {
+    const { user } = useUser();
     const [file, setFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [modelUrl, setModelUrl] = useState<string | null>(null);
     const [selectedSampleName, setSelectedSampleName] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isIosDevice, setIsIosDevice] = useState(false);
+    const [generationsLeft, setGenerationsLeft] = useState<number>(-1); // Using -1 instead of null
+    const [isCheckingUser, setIsCheckingUser] = useState(true);
+
+    useEffect(() => {
+        // Check if device is iOS (iPhone or iPad)
+        const checkIosDevice = () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+
+        setIsIosDevice(checkIosDevice());
+    }, []);
+
+    useEffect(() => {
+        const checkOrCreateUser = async () => {
+            if (!user) return;
+            
+            setIsCheckingUser(true);
+            
+            try {
+                const userEmail = user.primaryEmailAddress?.emailAddress;
+                const userName = user.fullName || user.firstName || "User";
+                
+                if (!userEmail) {
+                    console.error("User email not available");
+                    return;
+                }
+                
+                // Reference to the user document
+                const userRef = doc(db, "users", userEmail);
+                const userDoc = await getDoc(userRef);
+                
+                if (userDoc.exists()) {
+                    // User exists, get generations_left
+                    const userData = userDoc.data();
+                    setGenerationsLeft(userData.generations_left);
+                } else {
+                    // User does not exist, create new document
+                    await setDoc(userRef, {
+                        name: userName,
+                        email: userEmail,
+                        generations_left: 1
+                    });
+                    setGenerationsLeft(1);
+                }
+            } catch (error) {
+                console.error("Error checking/creating user:", error);
+            } finally {
+                setIsCheckingUser(false);
+            }
+        };
+        
+        checkOrCreateUser();
+    }, [user]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -31,7 +88,8 @@ export const UploadImageWidget = () => {
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!file) return;
+        // Ensure generationsLeft is greater than 0 (not checking for -1 as it's the loading state)
+        if (!file || !user || generationsLeft <= 0) return;
 
         setIsLoading(true);
         const formData = new FormData();
@@ -49,6 +107,17 @@ export const UploadImageWidget = () => {
                 const modelFile = new File([blob], `output.${fileExtension}`, { type: blob.type });
                 const url = URL.createObjectURL(modelFile);
                 setModelUrl(url);
+                
+                // Decrement generations_left
+                const userEmail = user.primaryEmailAddress?.emailAddress;
+                if (userEmail) {
+                    const userRef = doc(db, "users", userEmail);
+                    const newGenerationsLeft = generationsLeft - 1;
+                    await updateDoc(userRef, {
+                        generations_left: newGenerationsLeft
+                    });
+                    setGenerationsLeft(newGenerationsLeft);
+                }
             } else {
                 const errorResponse = await response.json();
                 throw new Error(`Failed to process image: ${errorResponse.error || "Unknown error"}`);
@@ -83,15 +152,17 @@ export const UploadImageWidget = () => {
         }
     };
 
-    useEffect(() => {
-        // Check if device is iOS (iPhone or iPad)
-        const checkIosDevice = () => {
-            const userAgent = navigator.userAgent.toLowerCase();
-            return /iphone|ipad|ipod/.test(userAgent);
-        };
+    // Helper function to handle the disabled state of the upload button
+    const isUploadButtonDisabled = () => {
+        return !file || isLoading || !!modelUrl || generationsLeft <= 0;
+    };
 
-        setIsIosDevice(checkIosDevice());
-    }, []);
+    // Helper function to get the button text
+    const getButtonText = () => {
+        if (isLoading) return "Creating 3D Model...";
+        if (generationsLeft <= 0) return "No Generations Left";
+        return "Create 3D Model";
+    };
 
     return (
         <div className="relative z-10 flex flex-col items-center justify-center mt-10 px-4 md:px-6">
@@ -103,60 +174,76 @@ export const UploadImageWidget = () => {
             </p>
 
             <SignedIn>
-                <div className="rounded-lg w-full max-w-md sm:max-w-lg space-y-2 mx-auto md:mt-12 p-4 md:p-6 bg-[hsl(var(--card))] card-highlight">
-                    <form onSubmit={handleUpload}>
-                        <div className="mb-4">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                id="fileUpload"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                className="hidden"
-                            />
-                            <label
-                                htmlFor="fileUpload"
-                                className="flex items-center justify-center w-full h-24 sm:h-32 border-2 border-dashed border-[hsl(var(--primary))]/30 rounded-lg cursor-pointer hover:border-[hsl(var(--primary))]/60 transition-colors"
-                            >
-                                <div className="text-center">
-                                    {file ? (
-                                        <>
-                                            <Upload className="mx-auto mb-2 text-[hsl(var(--primary))]" size={24} />
-                                            <span className="text-sm sm:text-base truncate max-w-xs">
-                                                {selectedSampleName ? `Sample: ${selectedSampleName}` : file.name}
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Upload className="mx-auto mb-2 text-[hsl(var(--primary))]/70" size={24} />
-                                            <span className="text-sm sm:text-base">Click to upload an image</span>
-                                        </>
-                                    )}
+                {isCheckingUser ? (
+                    <div className="mt-8 text-center">
+                        <p className="text-gray-400">Loading user data...</p>
+                    </div>
+                ) : (
+                    <>
+                        {generationsLeft >= 0 && (
+                            <div className="mt-4 mb-6 text-center">
+                                <p className="text-lg font-medium">
+                                    You have <span className="text-[hsl(var(--primary))] font-bold">{generationsLeft}</span> generation{generationsLeft !== 1 ? 's' : ''} left
+                                </p>
+                            </div>
+                        )}
+                        
+                        <div className="rounded-lg w-full max-w-md sm:max-w-lg space-y-2 mx-auto md:mt-4 p-4 md:p-6 bg-[hsl(var(--card))] card-highlight">
+                            <form onSubmit={handleUpload}>
+                                <div className="mb-4">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        id="fileUpload"
+                                        ref={fileInputRef}
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                    />
+                                    <label
+                                        htmlFor="fileUpload"
+                                        className="flex items-center justify-center w-full h-24 sm:h-32 border-2 border-dashed border-[hsl(var(--primary))]/30 rounded-lg cursor-pointer hover:border-[hsl(var(--primary))]/60 transition-colors"
+                                    >
+                                        <div className="text-center">
+                                            {file ? (
+                                                <>
+                                                    <Upload className="mx-auto mb-2 text-[hsl(var(--primary))]" size={24} />
+                                                    <span className="text-sm sm:text-base truncate max-w-xs">
+                                                        {selectedSampleName ? `Sample: ${selectedSampleName}` : file.name}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload className="mx-auto mb-2 text-[hsl(var(--primary))]/70" size={24} />
+                                                    <span className="text-sm sm:text-base">Click to upload an image</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </label>
                                 </div>
-                            </label>
-                        </div>
-                        <button
-                            type="submit"
-                            className={`w-full px-4 py-2 bg-[hsl(var(--primary))] text-white rounded-lg shadow-md transition-all duration-300 
-                                ${!file || isLoading || !!modelUrl ? "opacity-50 cursor-not-allowed" : "hover:bg-[hsl(var(--primary))]/80 hover:shadow-lg hover:cursor-pointer"}`}
-                            disabled={!file || isLoading || !!modelUrl}
-                        >
-                            {isLoading ? "Creating 3D Model..." : "Create 3D Model"}
-                        </button>
-                    </form>
+                                <button
+                                    type="submit"
+                                    className={`w-full px-4 py-2 bg-[hsl(var(--primary))] text-white rounded-lg shadow-md transition-all duration-300 
+                                        ${isUploadButtonDisabled() ? "opacity-50 cursor-not-allowed" : "hover:bg-[hsl(var(--primary))]/80 hover:shadow-lg hover:cursor-pointer"}`}
+                                    disabled={isUploadButtonDisabled()}
+                                >
+                                    {getButtonText()}
+                                </button>
+                            </form>
 
-                    {modelUrl && (
-                        <div className="mt-4 text-center">
-                            <a
-                                href={modelUrl}
-                                rel="ar"
-                                className="inline-block bg-[hsl(var(--accent))]/10 text-white/70 px-4 py-3 rounded-lg hover:bg-[hsl(var(--accent))]/20 transition-colors font-semibold text-sm sm:text-base"
-                            >
-                                {isIosDevice ? "View in AR" : "Download"}
-                            </a>
+                            {modelUrl && (
+                                <div className="mt-4 text-center">
+                                    <a
+                                        href={modelUrl}
+                                        rel="ar"
+                                        className="inline-block bg-[hsl(var(--accent))]/10 text-white/70 px-4 py-3 rounded-lg hover:bg-[hsl(var(--accent))]/20 transition-colors font-semibold text-sm sm:text-base"
+                                    >
+                                        {isIosDevice ? "View in AR" : "Download"}
+                                    </a>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
                 
                 {/* Integrated Gallery Section */}
                 <section className="relative z-10 py-6 text-center w-full" id='gallery'>
@@ -176,7 +263,7 @@ export const UploadImageWidget = () => {
                                     width={item.width} 
                                     height={item.height} 
                                     className="w-full h-full object-cover"
-                                    priority // Loads images faster
+                                    priority
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-gray-700 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                                     <p className="text-white text-lg font-medium">{item.name}</p>
